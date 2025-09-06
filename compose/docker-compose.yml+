@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: odoo
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata_stage:/var/lib/postgresql/data
+
+  odoo:
+    image: ghcr.io/seralkhatem3210/seralkhatem3210staging:staging-${GIT_REF}        #compose-odoo   # أو ghcr.io/... حسب صورتك
+    depends_on: [db]
+    environment:
+      ODOO_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      ODOO_ADMIN_PASSWORD: ${ODOO_ADMIN_PASSWORD}
+      AUTO_UPGRADE_MODULES: "1"
+      UPGRADE_LIST: "base,web"
+    ports:
+      - "10019:8069"
+    volumes:
+      - odoo_data_stage:/var/lib/odoo
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN_STAGING}
+
+volumes:
+  pgdata_stage:
+  odoo_data_stage:
