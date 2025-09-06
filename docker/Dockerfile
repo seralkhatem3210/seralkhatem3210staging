@@ -14,9 +14,10 @@ COPY requirements.txt /tmp/requirements.txt
 RUN python3 -m pip install --no-cache-dir -r /tmp/requirements.txt
 
 # الإضافات والتهيئة
-COPY addons /mnt/extra-addons
-COPY docker/odoo.conf /etc/odoo/odoo.conf
-COPY docker/entrypoint.sh /entrypoint.sh
+RUN mkdir -p /mnt/extra-addons
+COPY ./addons/ /mnt/extra-addons/
+COPY ./docker/odoo.conf /etc/odoo/odoo.conf
+COPY ./docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh && chown -R odoo:odoo /mnt/extra-addons
 
 USER odoo
