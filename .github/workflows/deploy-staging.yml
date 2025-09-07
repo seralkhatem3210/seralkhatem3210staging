@@ -1,0 +1,44 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches: [ staging ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging   # يقرأ أسرار بيئة staging التي عندك
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY_STAGING }}
+
+      - name: Upload compose file to server
+        run: |
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" compose/docker-compose.yml \
+            ${{ secrets.SSH_USER_STAGING }}@${{ secrets.SSH_HOST_STAGING }}:~/odoo/compose.yml
+
+      - name: Remote deploy
+        env:
+          REGISTRY_USERNAME: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD_STAGING }}
+          ODOO_ADMIN_PASSWORD: ${{ secrets.ODOO_ADMIN_PASSWORD_STAGING }}
+          CLOUDFLARE_TUNNEL_TOKEN_STAGING: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN_STAGING }}
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER_STAGING }}@${{ secrets.SSH_HOST_STAGING }} << 'EOF'
+          set -e
+          export POSTGRES_PASSWORD='${POSTGRES_PASSWORD}'
+          export ODOO_ADMIN_PASSWORD='${ODOO_ADMIN_PASSWORD}'
+          export CLOUDFLARE_TUNNEL_TOKEN_STAGING='${CLOUDFLARE_TUNNEL_TOKEN_STAGING}'
+          docker login ghcr.io -u ${REGISTRY_USERNAME} -p ${REGISTRY_TOKEN}
+          mkdir -p ~/odoo
+          docker compose -f ~/odoo/compose.yml pull
+          docker compose -f ~/odoo/compose.yml up -d --remove-orphans
+          docker system prune -f
+          EOF
