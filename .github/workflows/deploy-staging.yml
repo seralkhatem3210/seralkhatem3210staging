@@ -47,6 +47,6 @@ jobs:
       - name: Smoke test (HTTP 200 on /web/login)
         run: |
           set -e
-          curl -sSf --max-time 20 http://$STAGING_HOST:10019/web/login >/dev/null
+          curl -sSf --max-time 20 https://odoo-staging.example.com/web/login >/dev/null
         env:
           STAGING_HOST: ${{ secrets.SSH_HOST_STAGING }}
