@@ -44,9 +44,13 @@ jobs:
           EOF
 
       # 🔥 Smoke test here
-      - name: Smoke test (HTTP 200 on /web/login)
+      - name: Smoke test (via Cloudflare Tunnel)
         run: |
           set -e
           curl -sSf --max-time 20 https://odoo-staging.example.com/web/login >/dev/null
+      #- name: Smoke test (HTTP 200 on /web/login)
+       # run: |
+      #    set -e
+       #   curl -sSf --max-time 20 https://odoo-staging.example.com/web/login >/dev/null
         env:
           STAGING_HOST: ${{ secrets.SSH_HOST_STAGING }}
