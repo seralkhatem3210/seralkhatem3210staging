@@ -42,3 +42,11 @@ jobs:
           docker compose -f ~/odoo/compose.yml up -d --remove-orphans
           docker system prune -f
           EOF
+
+      # 🔥 Smoke test here
+      - name: Smoke test (HTTP 200 on /web/login)
+        run: |
+          set -e
+          curl -sSf --max-time 20 http://$STAGING_HOST:10019/web/login >/dev/null
+        env:
+          STAGING_HOST: ${{ secrets.SSH_HOST_STAGING }}
