@@ -1,0 +1,60 @@
+name: Build & Push Image
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*.*.*' ]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # تشخيص: تأكد أن addons و Dockerfile موجودان في سياق البناء
+      - name: Show repo tree & Dockerfile
+        run: |
+          pwd
+          ls -la
+          echo "---- addons ----"
+          ls -la ./addons || true
+          echo "---- docker/ ----"
+          ls -la ./docker  || true
+          echo "---- Dockerfile ----"
+          sed -n '1,160p' docker/Dockerfile
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/seralkhatem3210/seralkhatem3210staging
+          tags: |
+            type=raw,value=latest
+            type=raw,value=main-${{ github.sha }}
+            type=ref,event=tag
+
+      # لو addons فاضي على الأقل فيه .gitkeep؛ هذا مجرد تأكيد إضافي
+      - name: Ensure addons dir exists
+        run: |
+          [ -d addons ] || (mkdir -p addons && touch addons/.gitkeep)
+
+      - name: Build & Push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
