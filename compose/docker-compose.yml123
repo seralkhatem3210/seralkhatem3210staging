@@ -1,0 +1,42 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: odoo
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - /home/deploy/odoo/data/pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo -d odoo"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  odoo:
+    image: ghcr.io/seralkhatem3210/seralkhatem3210staging:staging-${GIT_REF}
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - HOST=0.0.0.0
+      - ODOO_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      - ODOO_ADMIN_PASSWORD: ${ODOO_ADMIN_PASSWORD}
+      - AUTO_UPGRADE_MODULES: "1"
+      - UPGRADE_LIST: "base,web"
+    ports:
+      - "10019:8069"     # احذفها إذا ستعتمد فقط على Cloudflare Tunnel
+    volumes:
+      - /home/deploy/odoo/data/odoo:/var/lib/odoo
+    restart: unless-stopped
+    
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN_STAGING}
